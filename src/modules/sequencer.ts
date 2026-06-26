@@ -13,7 +13,8 @@ function midiName(m: number) {
 // 8-step sequencer with semitone pitches. Outputs CV (Hz) + gate.
 export class SequencerModule extends Module {
   steps: { midi: number; on: boolean }[] = [];
-  numSteps = 8;
+  numSteps = 16;
+  activeLen = 8;
   current = -1;
   running = false;
   bpm = 110;
@@ -32,17 +33,38 @@ export class SequencerModule extends Module {
     this.cvOut.offset.value = midiToHz(57);
     this.cvOut.start();
 
-    // pleasant default: A minor pentatonic-ish ostinato
-    const defaults = [57, 60, 64, 67, 64, 60, 69, 67];
+    // pleasant default: A minor pentatonic-ish ostinato across 16 steps
+    const defaults = [57, 60, 64, 67, 64, 60, 69, 67, 57, 60, 64, 72, 69, 64, 60, 55];
     for (let i = 0; i < this.numSteps; i++) {
-      this.steps.push({ midi: defaults[i], on: true });
+      this.steps.push({ midi: defaults[i], on: i < this.activeLen });
     }
     this.buildUi();
   }
 
   buildUi() {
+    const ctl = document.createElement("div");
+    ctl.style.display = "flex";
+    ctl.style.alignItems = "center";
+    ctl.style.gap = "8px";
+    ctl.style.marginBottom = "6px";
+    const lenLabel = document.createElement("span");
+    lenLabel.className = "knob-label";
+    lenLabel.textContent = "len";
+    const lenSel = document.createElement("select");
+    lenSel.className = "select";
+    [4, 8, 12, 16].forEach(n => {
+      const o = document.createElement("option");
+      o.value = String(n); o.textContent = String(n);
+      if (n === this.activeLen) o.selected = true;
+      lenSel.appendChild(o);
+    });
+    lenSel.onchange = () => { this.activeLen = +lenSel.value; this.updateActiveDisplay(); };
+    ctl.append(lenLabel, lenSel);
+    this.body.appendChild(ctl);
+
     const grid = document.createElement("div");
     grid.className = "seq-grid";
+    grid.style.gridTemplateColumns = `repeat(${this.numSteps}, 1fr)`;
     this.steps.forEach((step, i) => {
       const cell = document.createElement("div");
       cell.className = "seq-step";
@@ -78,6 +100,7 @@ export class SequencerModule extends Module {
     });
 
     this.body.appendChild(grid);
+    this.updateActiveDisplay();
 
     this.addJack(makePort({ module: this, dir: "out", kind: "cv", label: "cv", node: this.cvOut }), "cv");
     this.gatePort = makePort({ module: this, dir: "out", kind: "gate", label: "gate" });
@@ -117,7 +140,7 @@ export class SequencerModule extends Module {
       const t = this._nextTime;
       const delay = (t - ctx.currentTime) * 1000;
       setTimeout(() => { this.current = idx; this.updateHighlight(); }, Math.max(0, delay));
-      this._stepIdx = (this._stepIdx + 1) % this.numSteps;
+      this._stepIdx = (this._stepIdx + 1) % this.activeLen;
       this._nextTime += stepDur;
     }
     this._timer = window.setTimeout(this.tick, 25);
@@ -125,6 +148,12 @@ export class SequencerModule extends Module {
 
   updateHighlight() {
     this.stepEls.forEach((el, i) => el.cell.classList.toggle("current", i === this.current));
+  }
+
+  updateActiveDisplay() {
+    this.stepEls.forEach((el, i) => {
+      el.cell.style.opacity = i < this.activeLen ? "1" : "0.3";
+    });
   }
 
   protected onDestroy() {

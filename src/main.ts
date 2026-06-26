@@ -12,6 +12,8 @@ import { OutputModule } from "./modules/output";
 import { SequencerModule } from "./modules/sequencer";
 import { MixerModule } from "./modules/mixer";
 import { KeyboardModule } from "./modules/keyboard";
+import { ScopeModule } from "./modules/scope";
+import { ReverbModule } from "./modules/reverb";
 
 const rack = document.getElementById("rack") as HTMLDivElement;
 const cablesSvg = document.getElementById("cables") as unknown as SVGSVGElement;
@@ -181,6 +183,8 @@ function addByType(t: string) {
     case "seq": m = new SequencerModule(); break;
     case "mixer": m = new MixerModule(); break;
     case "keys": m = new KeyboardModule(); break;
+    case "scope": m = new ScopeModule(); break;
+    case "reverb": m = new ReverbModule(); break;
     case "output": m = new OutputModule(); break;
     default: return;
   }
