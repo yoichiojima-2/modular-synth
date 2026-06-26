@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>modular</title>
+  <link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">modular<span class="dot">.</span></div>
+    <div class="transport">
+      <button id="power" class="btn" title="start audio engine">power</button>
+      <button id="play" class="btn" disabled>play</button>
+      <button id="stop" class="btn" disabled>stop</button>
+      <label class="tempo">
+        bpm
+        <input type="number" id="bpm" min="40" max="240" value="110" />
+      </label>
+      <button id="add-module" class="btn ghost">+ module</button>
+    </div>
+    <div class="hint">drag a jack to another jack to patch. right-click a cable to remove.</div>
+  </header>
+  <main id="rack" class="rack"></main>
+  <svg id="cables" class="cables"></svg>
+  <div id="module-menu" class="menu hidden">
+    <button data-type="osc">oscillator</button>
+    <button data-type="filter">filter</button>
+    <button data-type="env">envelope</button>
+    <button data-type="vca">vca</button>
+    <button data-type="lfo">lfo</button>
+    <button data-type="seq">sequencer</button>
+    <button data-type="noise">noise</button>
+    <button data-type="delay">delay</button>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>
