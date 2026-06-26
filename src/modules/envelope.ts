@@ -38,7 +38,8 @@ export class EnvelopeModule extends Module {
 
     const gateIn = makePort({
       module: this, dir: "in", kind: "gate", label: "gate",
-      onGate: (t, vel, freq, dur) => this.trigger(t, vel, freq, dur)
+      onGate: (t, vel, freq, dur) => this.trigger(t, vel, freq, dur),
+      onGateOff: (t) => this.release(t)
     });
     this.addJack(gateIn, "gate");
     this.addJack(makePort({ module: this, dir: "out", kind: "cv", label: "env", node: this.src }), "env");
@@ -55,6 +56,16 @@ export class EnvelopeModule extends Module {
     const offT = t + Math.max(duration, this.a + this.d);
     o.setValueAtTime(peak * this.s, offT);
     o.linearRampToValueAtTime(0, offT + this.r);
+  }
+
+  release(t: number) {
+    const o = this.src.offset;
+    o.cancelScheduledValues(t);
+    // hold current value at t, then ramp to 0 over release time
+    // We don't know the exact current value cheaply; approximate with a small
+    // setTargetAtTime so the audible curve continues smoothly.
+    const tau = Math.max(0.005, this.r / 3);
+    o.setTargetAtTime(0, t, tau);
   }
 
   protected onDestroy() {

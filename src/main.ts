@@ -10,6 +10,8 @@ import { NoiseModule } from "./modules/noise";
 import { DelayModule } from "./modules/delay";
 import { OutputModule } from "./modules/output";
 import { SequencerModule } from "./modules/sequencer";
+import { MixerModule } from "./modules/mixer";
+import { KeyboardModule } from "./modules/keyboard";
 
 const rack = document.getElementById("rack") as HTMLDivElement;
 const cablesSvg = document.getElementById("cables") as unknown as SVGSVGElement;
@@ -177,6 +179,9 @@ function addByType(t: string) {
     case "noise": m = new NoiseModule(); break;
     case "delay": m = new DelayModule(); break;
     case "seq": m = new SequencerModule(); break;
+    case "mixer": m = new MixerModule(); break;
+    case "keys": m = new KeyboardModule(); break;
+    case "output": m = new OutputModule(); break;
     default: return;
   }
   addModule(m);

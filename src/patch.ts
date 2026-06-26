@@ -19,6 +19,8 @@ export interface Port {
   target?: AudioNode | AudioParam;
   // For gate ins: a callback fired when a gate arrives
   onGate?: (time: number, velocity: number, freq: number, duration: number) => void;
+  // For gate ins: a callback fired on gate-off (for sustained note inputs like keyboard)
+  onGateOff?: (time: number) => void;
   el?: HTMLElement; // jack DOM element
 }
 
@@ -78,6 +80,13 @@ export class PatchBay {
     for (const c of this.cables) {
       if (c.from === from && c.to.kind === "gate" && c.to.onGate) {
         c.to.onGate(time, velocity, freq, duration);
+      }
+    }
+  }
+  fireGateOff(from: Port, time: number) {
+    for (const c of this.cables) {
+      if (c.from === from && c.to.kind === "gate" && c.to.onGateOff) {
+        c.to.onGateOff(time);
       }
     }
   }

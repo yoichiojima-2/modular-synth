@@ -2,12 +2,17 @@ import { engine } from "../audio";
 import { makePort, patchBay, type Port } from "../patch";
 import { Module } from "./base";
 
-// 8-step sequencer. Outputs:
-//   - cv (1v/oct style but in Hz on freq port)
-//   - gate (uses patchBay.fireGate)
-// Also exposes a ConstantSourceNode for the pitch CV so it can modulate OSC freq directly.
+const NOTE_NAMES = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+function midiToHz(m: number) { return 440 * Math.pow(2, (m - 69) / 12); }
+function midiName(m: number) {
+  const n = NOTE_NAMES[((m % 12) + 12) % 12];
+  const oct = Math.floor(m / 12) - 1;
+  return `${n}${oct}`;
+}
+
+// 8-step sequencer with semitone pitches. Outputs CV (Hz) + gate.
 export class SequencerModule extends Module {
-  steps: { note: number; on: boolean }[] = [];
+  steps: { midi: number; on: boolean }[] = [];
   numSteps = 8;
   current = -1;
   running = false;
@@ -15,7 +20,7 @@ export class SequencerModule extends Module {
   gateRatio = 0.5;
   cvOut: ConstantSourceNode;
   gatePort!: Port;
-  stepEls: HTMLElement[] = [];
+  stepEls: { cell: HTMLElement; label: HTMLElement; btn: HTMLElement }[] = [];
   private _nextTime = 0;
   private _stepIdx = 0;
   private _timer: number | null = null;
@@ -24,13 +29,14 @@ export class SequencerModule extends Module {
     super({ type: "seq", title: "SEQ" });
     const ctx = engine.ctx!;
     this.cvOut = ctx.createConstantSource();
-    this.cvOut.offset.value = 220;
+    this.cvOut.offset.value = midiToHz(57);
     this.cvOut.start();
 
+    // pleasant default: A minor pentatonic-ish ostinato
+    const defaults = [57, 60, 64, 67, 64, 60, 69, 67];
     for (let i = 0; i < this.numSteps; i++) {
-      this.steps.push({ note: 220 + i * 30, on: i % 2 === 0 });
+      this.steps.push({ midi: defaults[i], on: true });
     }
-
     this.buildUi();
   }
 
@@ -40,18 +46,35 @@ export class SequencerModule extends Module {
     this.steps.forEach((step, i) => {
       const cell = document.createElement("div");
       cell.className = "seq-step";
-      const input = document.createElement("input");
-      input.type = "number";
-      input.min = "20";
-      input.max = "4000";
-      input.value = step.note.toFixed(0);
-      input.onchange = () => { step.note = +input.value; };
+      const label = document.createElement("div");
+      label.className = "knob-value";
+      label.textContent = midiName(step.midi);
+      label.style.cursor = "ns-resize";
+      label.style.userSelect = "none";
+
+      let dragY = 0, dragV = 0;
+      const move = (e: MouseEvent) => {
+        const semis = Math.round((dragY - e.clientY) / 8);
+        step.midi = Math.max(12, Math.min(108, dragV + semis));
+        label.textContent = midiName(step.midi);
+      };
+      const up = () => {
+        window.removeEventListener("mousemove", move);
+        window.removeEventListener("mouseup", up);
+      };
+      label.addEventListener("mousedown", e => {
+        e.preventDefault();
+        dragY = e.clientY; dragV = step.midi;
+        window.addEventListener("mousemove", move);
+        window.addEventListener("mouseup", up);
+      });
+
       const btn = document.createElement("button");
       btn.className = step.on ? "on" : "";
       btn.onclick = () => { step.on = !step.on; btn.className = step.on ? "on" : ""; };
-      cell.append(input, btn);
+      cell.append(label, btn);
       grid.appendChild(cell);
-      this.stepEls.push(cell);
+      this.stepEls.push({ cell, label, btn });
     });
 
     this.body.appendChild(grid);
@@ -82,12 +105,13 @@ export class SequencerModule extends Module {
   private tick = () => {
     if (!this.running) return;
     const ctx = engine.ctx!;
-    const stepDur = 60 / this.bpm / 2; // 8th notes
+    const stepDur = 60 / this.bpm / 2;
     while (this._nextTime < ctx.currentTime + 0.15) {
       const step = this.steps[this._stepIdx];
       if (step.on) {
-        this.cvOut.offset.setValueAtTime(step.note, this._nextTime);
-        patchBay.fireGate(this.gatePort, this._nextTime, 1, step.note, stepDur * this.gateRatio);
+        const hz = midiToHz(step.midi);
+        this.cvOut.offset.setValueAtTime(hz, this._nextTime);
+        patchBay.fireGate(this.gatePort, this._nextTime, 1, hz, stepDur * this.gateRatio);
       }
       const idx = this._stepIdx;
       const t = this._nextTime;
@@ -100,7 +124,7 @@ export class SequencerModule extends Module {
   };
 
   updateHighlight() {
-    this.stepEls.forEach((el, i) => el.classList.toggle("current", i === this.current));
+    this.stepEls.forEach((el, i) => el.cell.classList.toggle("current", i === this.current));
   }
 
   protected onDestroy() {
