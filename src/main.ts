@@ -22,6 +22,7 @@ const playBtn = document.getElementById("play") as HTMLButtonElement;
 const stopBtn = document.getElementById("stop") as HTMLButtonElement;
 const bpmInput = document.getElementById("bpm") as HTMLInputElement;
 const addBtn = document.getElementById("add-module") as HTMLButtonElement;
+const panicBtn = document.getElementById("panic") as HTMLButtonElement;
 const menu = document.getElementById("module-menu") as HTMLDivElement;
 
 const modules: Module[] = [];
@@ -211,6 +212,16 @@ playBtn.addEventListener("click", () => {
 stopBtn.addEventListener("click", () => {
   sequencers.forEach(s => s.stop());
   playBtn.classList.remove("active");
+});
+
+panicBtn.addEventListener("click", () => {
+  if (!engine.ctx) return;
+  sequencers.forEach(s => s.stop());
+  playBtn.classList.remove("active");
+  const t = engine.now();
+  engine.master.gain.cancelScheduledValues(t);
+  engine.master.gain.setValueAtTime(0, t);
+  engine.master.gain.linearRampToValueAtTime(0.6, t + 0.2);
 });
 
 bpmInput.addEventListener("input", () => {

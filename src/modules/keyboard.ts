@@ -32,13 +32,19 @@ export class KeyboardModule extends Module {
     document.addEventListener("keyup", this.onKeyUp);
   }
 
+  octLabel!: HTMLElement;
+
   buildUi() {
     const info = document.createElement("div");
     info.className = "knob-value";
     info.style.color = "var(--muted)";
     info.style.padding = "2px 0";
-    info.textContent = `keys row: a w s e d f t g y h u j  ·  z/x: oct`;
-    this.body.appendChild(info);
+    info.textContent = `a w s e d f t g y h u j · z/x:oct`;
+    const oct = document.createElement("div");
+    oct.className = "knob-value";
+    oct.textContent = `oct ${this.octave}`;
+    this.octLabel = oct;
+    this.body.append(info, oct);
 
     const piano = document.createElement("div");
     piano.style.display = "flex";
@@ -99,8 +105,8 @@ export class KeyboardModule extends Module {
 
   onKeyDown = (e: KeyboardEvent) => {
     if (e.target instanceof HTMLInputElement) return;
-    if (e.key === "z") { this.octave = Math.max(0, this.octave - 1); return; }
-    if (e.key === "x") { this.octave = Math.min(8, this.octave + 1); return; }
+    if (e.key === "z") { this.octave = Math.max(0, this.octave - 1); this.octLabel.textContent = `oct ${this.octave}`; return; }
+    if (e.key === "x") { this.octave = Math.min(8, this.octave + 1); this.octLabel.textContent = `oct ${this.octave}`; return; }
     const idx = ROW_KEYS.indexOf(e.key);
     if (idx < 0) return;
     e.preventDefault();
